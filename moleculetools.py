@@ -144,7 +144,10 @@ class Structure:
                                            'distance': d})
 
     def find_axis(self):
-        self.main_axis = best_fitted_plane(self.coords)
+        try:
+            self.main_axis = best_fitted_plane(self.coords)
+        except np.linalg.LinAlgError:
+            self.main_axis = np.array([0.0, 0.0, 1.0])
 
     def update_geometry(self):
         self.find_center()
@@ -152,11 +155,14 @@ class Structure:
 
     def rotate_to_z(self):
         self.update_geometry()
-        z = np.array([0, 0, 1])
+        z = np.array([0.0, 0.0, 1.0])
         angle = angle_between(self.main_axis, z)
-        direction = find_normal_from_vectors(self.main_axis, z)
-        M = rotation_matrix(angle, direction, point=self.center)
-        self.coords = apply_4x4_matrix_to_3D_set(M, self.coords)
+        if angle > 1:
+            direction = find_normal_from_vectors(self.main_axis, z)
+            M = rotation_matrix(angle, direction, point=self.center)
+            self.coords = apply_4x4_matrix_to_3D_set(M, self.coords)
+        else:
+            pass
         self.update_geometry()
 
     def rotate_along_z(self, angle):
@@ -173,8 +179,11 @@ def read_xyz(xyz):
     atom_list = []
     xyz_list = []
     for line in xyz_lines:
-        atom_list.append(line.split()[0])
-        xyz_list.append([float(coord) for coord in line.split()[1:]])
+        try:
+            atom_list.append(line.split()[0])
+            xyz_list.append([float(coord) for coord in line.split()[1:]])
+        except IndexError:
+            pass
     return (atom_list, np.asarray(xyz_list))
 
     #def find_axis(self, atoms=None, print_info=False):

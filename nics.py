@@ -1,9 +1,81 @@
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib import rc
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import moleculetools as mt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+
+rc('font', **{'family':'sans-serif', 'sans-serif':['Helvetica Neue'], 'weight':'light', 'size':8})
+#plt.rcParams['pdf.fonttype'] = 42
+plt.rcParams['lines.linewidth'] = 1
+plt.rcParams['lines.markeredgewidth'] = 0
+plt.rcParams['lines.markersize'] = 4.5
+plt.rcParams['lines.markeredgecolor'] = (0, 0, 0, 0)
+
+
+def cm2inch(value):
+    return value/2.54
+
+def new_figure(height=5, type='body'):
+    if type == 'body':
+        width = 10.75
+    elif type == 'margin':
+        width = 5
+    elif type == 'wide':
+        width = 16.5
+    else:
+        width = 10.75
+    fig = plt.figure(figsize=(cm2inch(width), cm2inch(height)))
+    fig.set_tight_layout(True)
+    return fig
+
+def tuftefy(ax):
+    ax.legend(frameon=False) # remove legend outlines
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    #ax.spines["bottom"].set_color('grey')
+    #ax.grid(color="w", alpha=0.5)
+    ax.get_yaxis().grid(False)
+    ax.get_xaxis().grid(False)
+    ax.tick_params(axis='both', which='major', pad=0)
+    ax.edgecolor = 1
+    ax.edgewidth = 0.5
+
+def make_colormap(seq):
+    """Return a LinearSegmentedColormap
+    seq: a sequence of floats and RGB-tuples. The floats should be increasing
+    and in the interval (0,1).
+    """
+    seq = [(None,) * 3, 0.0] + list(seq) + [1.0, (None,) * 3]
+    cdict = {'red': [], 'green': [], 'blue': []}
+    for i, item in enumerate(seq):
+        if isinstance(item, float):
+            r1, g1, b1 = seq[i - 1]
+            r2, g2, b2 = seq[i + 1]
+            cdict['red'].append([item, r1, r2])
+            cdict['green'].append([item, g1, g2])
+            cdict['blue'].append([item, b1, b2])
+    return mcolors.LinearSegmentedColormap('CustomMap', cdict)
+
+def diverge_map(high, low):
+    '''
+    low and high are colors that will be used for the two
+    ends of the spectrum. they can be either color strings
+    or rgb color tuples
+    '''
+    high = tuple([value/255 for value in high])
+    low = tuple([value/255 for value in low])
+    c = mcolors.ColorConverter().to_rgb
+    return make_colormap([low, c('white'), 0.5, c('white'), high])
+
+custom_cmap = diverge_map(high=(231, 76, 81), low=(75, 80, 170))
+
 
 class SurfaceStructure(mt.Structure):
     def update_relevant_coords(self):
@@ -29,7 +101,11 @@ class SurfaceStructure(mt.Structure):
         """
         self.center = mt.find_center(self.relevant_coords)
         self.update_relevant_coords()
-        self.main_axis = mt.best_fitted_plane(self.relevant_coords)
+        try:
+            self.main_axis = mt.best_fitted_plane(self.relevant_coords)
+        except np.linalg.LinAlgError:
+            self.main_axis = np.array([0.0, 0.0, 1.0])
+        print(self.main_axis)
         self.update_relevant_coords()
 
     def make_surface(self, radius=None, density=50, distance=0, functions=None, method='linear'):
@@ -47,12 +123,12 @@ class SurfaceStructure(mt.Structure):
                 ("x^2", lambda xy:np.square(xy[:,0])),
                 ("y^2", lambda xy:np.square(xy[:,1])),
                 ("xy", lambda xy:np.multiply(xy[:,0], xy[:,1])),
-                ("sin(x)", lambda xy:np.sin(xy[:,0])),
-                ("sin(y)", lambda xy:np.sin(xy[:,1])),
+                #("sin(x)", lambda xy:np.sin(xy[:,0])),
+                #("sin(y)", lambda xy:np.sin(xy[:,1])),
                 ("sqrt(x^2 + y^2)", lambda xy:np.sqrt(np.square(xy[:,0]) + np.square(xy[:,1]))),
                 ("sqrt(x^2 + y^2)^2", lambda xy:np.sqrt(np.square(xy[:,0]) + np.square(xy[:,1]))**2),
-                ("sin(x^2 + y^2)", lambda xy:np.sin(xy[:,0]**2 + xy[:,1]**2)),
-                #("1/(x^2 + y^2)", lambda xy:1/(xy[:,0]**2 + xy[:,1]**2))
+                #("sin(x^2 + y^2)", lambda xy:np.sin(xy[:,0]**2 + xy[:,1]**2)),
+                #("1/(x^2 + y^2)", lambda xy:1/(xy[:,0]**2 + xy[:,1]**2)),
             ]
 
         def build_predictors(x, y, functions):
@@ -85,6 +161,7 @@ class SurfaceStructure(mt.Structure):
             X = build_predictors(self.relevant_coords[:,0],
                                  self.relevant_coords[:,1], functions)
             y = self.relevant_coords[:,2]
+            print(X, y)
             lr.fit(X, y)
             grid = make_grid(radius=radius, density=density)
             pred_grid = build_predictors(grid[:,0], grid[:,1], functions)
@@ -103,7 +180,7 @@ class SurfaceStructure(mt.Structure):
                    self.coords[:,2], marker='o', s=30, color="black")
         ax.scatter(self.midpoints[:,0],
                    self.midpoints[:,1],
-                   self.midpoints[:,2], marker='o', s=30, color="green")
+                   self.midpoints[:,2], marker='o', s=30, color="gray")
         if numbering:
             for i in range(self.coords.shape[0]):
                 ax.text(self.coords[i,0],
@@ -114,12 +191,12 @@ class SurfaceStructure(mt.Structure):
             n_points = 21
             axis_points = np.reshape(np.linspace(-5, 5, n_points), (n_points, 1))
             points = np.matmul(axis_points, np.reshape(self.main_axis, (1, 3))) + self.center
-            ax.scatter(points[:,0], points[:,1], points[:,2], marker='.')
+            ax.scatter(points[:,0], points[:,1], points[:,2], marker='.', color='gray')
         try:
             ax.scatter(self.surface[:,0],
                        self.surface[:,1],
                        self.surface[:,2],
-                       marker='.', s=5, alpha=0.5, c=self.surface[:,2], cmap="viridis")
+                       marker='.', s=5, alpha=0.5, c=self.surface[:,2], cmap="magma")
         except:
             pass
 
@@ -240,12 +317,12 @@ class ReadSurfaceStructure(mt.Structure):
             plt.show()
         plt.close()
 
-    def save_2d(self, numbering=False):
+    def save_2d(self, range=None, numbering=False):
         """
         Saves the plot of the NICS values over the atoms of the molecule as
         a 2D graph where the molecule is flattened along its main axis (z)
         """
-        fig = plt.figure()
+        fig = new_figure(height=10.75)
         ax = fig.add_subplot(111)
         if numbering:
             for i in range(self.atom_coords.shape[0]):
@@ -261,21 +338,28 @@ class ReadSurfaceStructure(mt.Structure):
         #               vmax=np.amax(abs(self.isodata)),
         #               cmap="seismic")
 
-        vmin = -np.amax(abs(self.isodata))
-        vmax = np.amax(abs(self.isodata))
+        if range == None:
+            vmin = -np.amax(abs(self.isodata))
+            vmax = np.amax(abs(self.isodata))
+        else:
+            vmin = -range
+            vmax = range
 
         levels = np.linspace(vmin, vmax,
                              np.sqrt(self.surface_coords.shape[0]))
+        #levels = 36
 
         tricontourf_ = ax.tricontourf(self.surface_coords[:,0],
                        self.surface_coords[:,1],
                        self.isodata, levels=levels, vmin=vmin, vmax=vmax,
-                       cmap='seismic')
+                       norm=mcolors.SymLogNorm(linthresh=10, linscale=1,
+                                              vmin=vmin, vmax=vmax),
+                       cmap=custom_cmap)
 
         ax.scatter(self.atom_coords[:,0],
                    self.atom_coords[:,1], marker='o', s=30, color="black")
 
-        ax.margins(0,0)
+        ax.margins(0, 0)
         ax.axis("scaled")
         ax.set_xlim(np.amin(self.surface_coords[:,0]),
                     np.amax(self.surface_coords[:,0]))
@@ -285,13 +369,19 @@ class ReadSurfaceStructure(mt.Structure):
         ax.set_xlabel(r'x ($\AA$)')
         ax.set_ylabel(r'y ($\AA$)')
 
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+
         cbar = fig.colorbar(tricontourf_,
+                            ax=ax,
                             orientation='vertical',
                             fraction=0.03,
                             extend='both', label="NICS (ppm)",
-                            ticks=[np.ceil(vmin), 0, np.floor(vmax)])
-        plt.tight_layout()
-        fig.savefig("{}-2d.png".format(self.name), transparent=True)
+                            #ticks=[np.ceil(vmin), 0, np.floor(vmax)],
+                            cax=cax)
+        #cbar.ax.set_yticklabels([np.ceil(vmin), 0, np.floor(vmax)])
+        tuftefy(ax)
+        fig.savefig("{}-2d.png".format(self.name), transparent=True, dpi=300)
         plt.close()
 
 
@@ -384,7 +474,11 @@ def surface(xyz_file, atom_list, radius, density):
 # STEP 2: needs a log file, and plotting options
 @main.command()
 @click.argument('log_file')
-def plot(log_file):
+@click.option('--visualize/--no-visualize', default=False,
+              help='Visualize the 3D representation in an interactive window')
+@click.option('--range', '-r', default=None, help="Range of the colors",
+              type=int, show_default=True)
+def plot(log_file, visualize, range):
     """
     Generates plots of the results given a log file
     """
@@ -396,8 +490,8 @@ def plot(log_file):
     solved.split_coords()
     solved.load_nics(log_file)
     solved.find_radius()
-    solved.save_3d(interactive=True)
-    solved.save_2d()
+    solved.save_3d(interactive=visualize)
+    solved.save_2d(range=range)
 
 @main.command()
 @click.argument('xyz_file')
