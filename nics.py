@@ -204,6 +204,8 @@ class SurfaceStructure(mt.Structure):
         ax.set_ylabel(r'y ($\AA$)')
         ax.set_zlabel(r'z ($\AA$)')
 
+        plt.tight_layout()
+
         try:
             set_axes_radius(ax, self.center, self.surface[:,0].max())
         except:
