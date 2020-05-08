@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
-rc('font', **{'family':'sans-serif', 'sans-serif':['Helvetica Neue'], 'weight':'light', 'size':8})
+rc('font', **{'family':'sans-serif', 'sans-serif':['Helvetica Neue'], 'weight':'light', 'size':12})
 #plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['lines.linewidth'] = 1
 plt.rcParams['lines.markeredgewidth'] = 0
@@ -379,7 +379,7 @@ class ReadSurfaceStructure(mt.Structure):
                             orientation='vertical',
                             fraction=0.03,
                             extend='both', label="NICS (ppm)",
-                            #ticks=[np.ceil(vmin), 0, np.floor(vmax)],
+                            ticks=[np.ceil(vmin), 0, np.floor(vmax)],
                             cax=cax)
         #cbar.ax.set_yticklabels([np.ceil(vmin), 0, np.floor(vmax)])
         tuftefy(ax)
