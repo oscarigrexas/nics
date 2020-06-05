@@ -4,48 +4,19 @@ from matplotlib import rc
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import moleculetools as mt
 from mpl_toolkits.mplot3d import Axes3D
+import plot_utils as pu
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
-rc('font', **{'family':'sans-serif', 'sans-serif':['Helvetica Neue'], 'weight':'light', 'size':12})
-#plt.rcParams['pdf.fonttype'] = 42
-plt.rcParams['lines.linewidth'] = 1
-plt.rcParams['lines.markeredgewidth'] = 0
-plt.rcParams['lines.markersize'] = 4.5
-plt.rcParams['lines.markeredgecolor'] = (0, 0, 0, 0)
+#rc('font', **{'family':'sans-serif', 'sans-serif':['Helvetica Neue'], #'weight':'light', 'size':12})
+##plt.rcParams['pdf.fonttype'] = 42
+#plt.rcParams['lines.linewidth'] = 1
+#plt.rcParams['lines.markeredgewidth'] = 0
+#plt.rcParams['lines.markersize'] = 4.5
+#plt.rcParams['lines.markeredgecolor'] = (0, 0, 0, 0)
 
-
-def cm2inch(value):
-    return value/2.54
-
-def new_figure(height=5, type='body'):
-    if type == 'body':
-        width = 10.75
-    elif type == 'margin':
-        width = 5
-    elif type == 'wide':
-        width = 16.5
-    else:
-        width = 10.75
-    fig = plt.figure(figsize=(cm2inch(width), cm2inch(height)))
-    fig.set_tight_layout(True)
-    return fig
-
-def tuftefy(ax):
-    ax.legend(frameon=False) # remove legend outlines
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_visible(False)
-    ax.spines["bottom"].set_visible(False)
-    #ax.spines["bottom"].set_color('grey')
-    #ax.grid(color="w", alpha=0.5)
-    ax.get_yaxis().grid(False)
-    ax.get_xaxis().grid(False)
-    ax.tick_params(axis='both', which='major', pad=0)
-    ax.edgecolor = 1
-    ax.edgewidth = 0.5
+pu.set_styles()
 
 def make_colormap(seq):
     """Return a LinearSegmentedColormap
@@ -324,8 +295,7 @@ class ReadSurfaceStructure(mt.Structure):
         Saves the plot of the NICS values over the atoms of the molecule as
         a 2D graph where the molecule is flattened along its main axis (z)
         """
-        fig = new_figure(height=10.75)
-        ax = fig.add_subplot(111)
+        fig, ax = pu.new_figure(height=4, type='margin')
         if numbering:
             for i in range(self.atom_coords.shape[0]):
                 ax.text(self.atom_coords[i,0],
@@ -382,8 +352,10 @@ class ReadSurfaceStructure(mt.Structure):
                             ticks=[np.ceil(vmin), 0, np.floor(vmax)],
                             cax=cax)
         #cbar.ax.set_yticklabels([np.ceil(vmin), 0, np.floor(vmax)])
-        tuftefy(ax)
-        fig.savefig("{}-2d.png".format(self.name), transparent=True, dpi=300)
+        pu.tuftefy(ax)
+        fig.savefig("{}-2d.png".format(self.name),
+                    transparent=True, dpi=600/2.54,
+                    pad_inches=0, bbox_inches='tight')
         plt.close()
 
 
