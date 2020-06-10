@@ -130,15 +130,15 @@ class Structure:
         distances = np.linalg.norm(self.coords - self.center, axis=1)
         self.radius = distances.max()
 
-    def find_bonds(self):
-        MIN_BOND_LENGTH = 0.9
-        MAX_BOND_LENGTH = 2.1
+    def find_bonds(self, min_l=1.3, max_l=2.1):
+        MIN_BOND_LENGTH = min_l
+        MAX_BOND_LENGTH = max_l
         self.bonds = []
         for i in range(len(self.atoms)):
             for j in range(i + 1, len(self.atoms)):
                 if i != j:
                     d = np.linalg.norm(self.coords[i,:] - self.coords[j,:])
-                    if MIN_BOND_LENGTH <= d <= MAX_BOND_LENGTH:
+                    if MIN_BOND_LENGTH <= d <= MAX_BOND_LENGTH and not (self.atoms[i] == 'H' and self.atoms[j] == 'H'):
                         self.bonds.append({'atoms': (i, j),
                                            'elements': (self.atoms[i], self.atoms[j]),
                                            'distance': d})
